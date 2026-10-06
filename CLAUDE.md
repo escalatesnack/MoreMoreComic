@@ -30,8 +30,48 @@ Claude Codeがこのディレクトリで起動すると自動で読み込まれ
 
 ## 現在の状態(2026-10-06)
 
-空のアプリ(画面の中央に「MoreMoreComic」と出るだけ)。ビルドが通ることは確認済み。実機では未確認。
+第1段階を実装済み(**実機未確認**。QA No.1〜23)。ビルドと単体テストは通っている。
 アプリのアイコンはFoldLauncherのものを仮に流用している。
+ユーザーにまだ聞けていないこと: 漫画のファイルが今どこにあって形式は何か(端末内/NAS/クラウド)、
+機能の仕分けで早くほしいもの・要らないもの。
+
+## ディレクトリ構成(主要)
+
+```
+app/src/main/java/io/github/escalatesnack/moremorecomic/
+  MainActivity.kt        本棚⇔ビューアの切り替え、フォルダ選択画面の呼び出し
+  AppViewModel.kt        アプリ全体の状態(本棚の中身・開いている本・設定・読んだ位置)
+  data/Library.kt        Book、本棚の保存(library.json)、フォルダの中から本を探す、数字順の並べ方
+  data/ZipArchive.kt     ZIPの読み取り(自前。下の設計メモ参照)
+  data/PageSource.kt     ページを番号で取り出す口(ZIP/画像フォルダ共通)、画像を縮めて読む
+  data/CoverCache.kt     本棚の表紙(cacheDir/covers に保存)
+  ui/BookshelfScreen.kt  本棚
+  ui/ViewerScreen.kt     ビューア(めくる・見開き・拡大・上下のバー)
+  ui/Spreads.kt          単ページ/見開きのまとまりの作り方
+app/src/test/            ZipArchive・並べ方・見開きの単体テスト
+```
+
+## 主要な設計・技術パターン
+
+- **ファイルの読み方**: Android標準のフォルダ選択(`OpenDocumentTree`)で許可をもらったフォルダの中だけを読む
+  (`takePersistableUriPermission`で許可を保存)。本の`id`は、そのフォルダの中での場所(document URI)。
+  ストレージ全体の許可(`MANAGE_EXTERNAL_STORAGE`)は使わない(ストア審査が厳しいため)。
+- **ZIPは自前で読む(`ZipArchive`)**: 標準の`ZipFile`はファイルのパスが要るが、フォルダ選択で選んだファイルは
+  パスをもらえない。`ZipInputStream`は頭から順にしか読めず、後ろのページを開くのが遅い。そこで、開いたファイルの
+  `FileChannel`から目次(セントラルディレクトリ)を読み、必要なページだけ取り出す。無圧縮/Deflate/Zip64対応。
+  ファイル名はUTF-8→だめならShift_JIS。**好きな位置から読めるファイル(端末内)が前提**で、クラウドの
+  ファイルなどは読めない可能性がある(第4段階でいったん端末にコピーする等の対応が要る)。
+  変えたら`./gradlew :app:testDebugUnitTest --offline`で確かめる。
+- **本の単位**: ZIP/CBZは1ファイルで1冊。画像が直接入っているフォルダは1フォルダで1冊。
+- **画像の読み込み**: 1ページ800万画素を上限に、縦横を半分ずつ縮めて読む(`decodeSampled`)。開いている本の
+  ページは、メモリの3分の1までを上限に持っておく(`PageLoader`)。`largeHeap`を有効にしている。
+- **単ページ/見開き**: 「自動」は画面の幅が600dp以上で見開き(Foldの開いた画面)。見開きは表紙だけ1枚。
+  開閉で画面を作り直さないよう、マニフェストの`configChanges`で自分で受けている。
+  1枚で見開きになっている横長の画像を1画面で出す処理はまだ無い(第3段階の「見開き位置の調節」とあわせて)。
+- **拡大**: ピンチは1画面分(`SpreadPage`)で受ける。拡大中はスワイプでのページめくりを止め、
+  めくると等倍に戻す。ダブルタップでの拡大は入れていない(タップでめくる反応が遅れるため)。
+- **保存場所**: 本棚=`filesDir/library.json`、読んだ位置=SharedPreferences `positions`、
+  設定(とじ方・表示)=SharedPreferences `settings`。
 
 ## 作る機能の計画(Bookloverの機能一覧から拾ったもの)
 
@@ -69,8 +109,10 @@ Claude Codeがこのディレクトリで起動すると自動で読み込まれ
 
 ## 関連アーティファクト
 
-- **QA動作確認チェックリスト**: まだ無い。最初の機能を実装したときに、このアプリ専用のものを新しく作り、
-  URLをここに書く(FoldLauncherのチェックリストとは分ける)。
+- **QA動作確認チェックリスト**(このアプリ専用。FoldLauncherのものとは別):
+  `https://claude.ai/artifact/3ZRtWixwWtctUSDLAHVqJ9`
+  FoldLauncherのチェックリストと同じ作り(ページ内の`app-data`に項目、`GROUPS`に見出し)。
+  項目を足すときは、読み込んでから`items`と`GROUPS`に足し、チェック済みを`archive`へ移して公開し直す。
 
 ## 進め方・コミュニケーションの好み
 
