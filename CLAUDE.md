@@ -18,9 +18,8 @@ Claude Codeがこのディレクトリで起動すると自動で読み込まれ
 - **パッケージ名**: `io.github.escalatesnack.moremorecomic`(ストアに登録できる形。`com.example`は登録できない)。
   正式なアプリ名が決まったら見直す。
 - **プロジェクトパス**: `~/AndroidStudioProjects/MoreMoreComic`(Mac)。
-- **リポジトリ**: GitHubのプライベートリポジトリ `escalatesnack/MoreMoreComic` の予定(Macは SSH)。
-  **2026-10-06時点ではまだ作っていない**(このMacには`gh`コマンドが無いので、ユーザーがGitHubのサイトで作る)。
-  作成後に `git remote add origin git@github.com:escalatesnack/MoreMoreComic.git` → `git push -u origin main`。
+- **リポジトリ**: GitHubのプライベートリポジトリ `escalatesnack/MoreMoreComic`(Macは SSH)。
+  このMacには`gh`コマンドが無い(GitHub上の操作が要るときは、ユーザーにサイトでやってもらう)。
 - **技術スタック**: Kotlin + Jetpack Compose。`minSdk=26`, `targetSdk=37`, `compileSdk=37`
   (Gradleの設定・ライブラリのバージョンはFoldLauncherと同じにしてある)。
 - **Macでのビルド確認の方法**: MacにはJava単体が入っていないので、Android Studio付属のJavaを指定する。
@@ -56,7 +55,7 @@ Claude Codeがこのディレクトリで起動すると自動で読み込まれ
 ## 複数PC(Mac / Windows)での開発ルール
 
 - **両方のPCで同時に作業しない**(衝突の原因)。
-- **Claudeが自動でやること(ユーザーから事前に許可済み。毎回確認しなくてよい)**(リポジトリを作った後から):
+- **Claudeが自動でやること(ユーザーから事前に許可済み。毎回確認しなくてよい)**:
   - **セッション開始時**: 最初に`git pull --ff-only`で最新を取り込む。未コミットの変更があって
     取り込めない/衝突する場合は、勝手に解消せず、状況をユーザーに説明して止まる。
   - **区切りごと**: 機能を1つ実装し終えるたびに、変更内容を確認してからコミットして`git push`する。
